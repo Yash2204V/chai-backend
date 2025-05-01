@@ -4,7 +4,7 @@ import { User } from "../models/user.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { deleteOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js"
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
@@ -30,12 +30,12 @@ const publishAVideo = asyncHandler(async (req, res) => {
     }
 
     const videoLocalPath = req.files?.videoFile[0]?.path;
-    if (!videoLocalPath){
+    if (!videoLocalPath) {
         throw new ApiError(400, "Video path is required")
     }
 
     let thumbnailLocalPath;
-    if(req.files && Array.isArray(req.files.thumbnail) && req.files.thumbnail.length > 0 ) {
+    if (req.files && Array.isArray(req.files.thumbnail) && req.files.thumbnail.length > 0) {
         thumbnailLocalPath = req.files?.thumbnail[0]?.path;
     }
 
@@ -45,7 +45,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
     if (!(videoFile || thumbnail)) {
         throw new ApiError("Error while uploading file on cloudinary")
     }
-
 
     const video = await Video.create({
         videoFile: videoFile.url,
@@ -66,24 +65,105 @@ const publishAVideo = asyncHandler(async (req, res) => {
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+    const { videoId } = req.params;
     //TODO: get video by id
+    if (!(videoId)) {
+        throw new ApiError(400, "Video Id is invalid");
+    }
 
+    const video = await Video.findById(videoId);
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, video, "Video Details Fetched Successfully")
+        )
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: update video details like title, description, thumbnail
+    if (!videoId) {
+        throw new ApiError(400, "Video Id is invalid")
+    }
 
+    const { title, description } = req.body;
+
+    if(!(title || description)) {
+        throw new ApiError(400, "Title or Description is invalid")
+    }
+
+    const thumbnailLocalPath = req.file?.path;
+    const oldVideo = await Video.findById(videoId);
+    const response = await deleteOnCloudinary(oldVideo);
+
+    if (!response) {
+        throw new ApiError(400, "Video deletion failed on cloudinary")
+    }
+
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+
+    const video = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set: {
+                title,
+                description,
+                thumbnail: thumbnail.url
+            }
+        },
+        { new: true }
+
+    );
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, video, "Video updated successfully")
+        )
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+    const { videoId } = req.params;
     //TODO: delete video
+
+    if (!videoId) {
+        throw new ApiError(400, "Video Id is invalid")
+    }
+
+    const video = await Video.findByIdAndDelete(videoId);
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, video, "Video is deleted successfully")
+    )
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+    const { videoId } = req.params;
+
+    if (!videoId) {
+        throw new ApiError(400, "Video Id is invalid")
+    }
+    const video = await Video.findById(videoId);
+
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set: {
+                isPublished: !(video.isPublished)
+            }
+        },
+        { new: true }
+    );
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, updatedVideo, "Publish status toggled successfully")
+        );
+
 })
 
 export {
