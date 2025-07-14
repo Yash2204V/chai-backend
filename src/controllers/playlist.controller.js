@@ -9,6 +9,13 @@ const createPlaylist = asyncHandler(async (req, res) => {
     const {name, description} = req.body
 
     //TODO: create playlist
+    /* 
+        1. Check for the presence of name & description.
+        2. Create the playlist and add up the name & description.
+        3. Check for the userId from middleware.
+        4. + Add the ObjectId of the User using the middleware req.user.
+        4. Then, send the response.
+    */
 })
 
 const getUserPlaylists = asyncHandler(async (req, res) => {

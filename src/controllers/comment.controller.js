@@ -3,13 +3,73 @@ import { Comment } from "../models/comment.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
+import { Video } from "../models/video.model.js"
 
 const getVideoComments = asyncHandler(async (req, res) => {
     //TODO: get all comments for a video
     const { videoId } = req.params
-    const { page = 1, limit = 10 } = req.query
+    const { page = 1, limit = 10 } = req.query;
 
-    
+    /* 
+        1. Take the Video id and extract the Video Schema.
+        2. Now Take the Video id and search in the comment schema.
+        3. Extract all the comments present with the video Id.
+        4. Take over the username & avatar.
+        5. Use aggregation pipeline + use pagination.
+
+    */
+    const options = {
+        page,
+        limit
+    }
+
+    if (!videoId) {
+        throw new ApiError(400, "VideoId is invalid");
+    }
+
+    // const comments = await Comment.find({ video: videoId }).populate("owner", "username avatar");
+
+    const myAggregateComments = Comment.aggregate([
+        {
+            $match: {
+                video: new mongoose.Types.ObjectId(videoId)
+            }
+        }, {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "commentor"
+            }
+        }, {
+            $unwind: "$commentor" // This ensure, each time seperate commentor object is formed.
+        }, {
+            $project: {
+                _id: 0,
+                content: 1,
+                "commentor.username": 1,
+                "commentor.avatar": 1,
+            }
+        }
+    ]);
+
+    if (!myAggregateComments) {
+        throw new ApiError(400, "Invalid comment fetching.")
+    }
+
+    Comment.aggregatePaginate(myAggregateComments, options, function (err, results) {
+        if (err) {
+            console.error(err);
+            throw new ApiError(400, "Invalid comment fetching in aggregation pipeline.")
+        } else {
+            return res
+                .status(200)
+                .json(
+                    new ApiResponse(200, results, "Got Video all comments successfully.")
+                )
+        }
+    })
+
 })
 
 const addComment = asyncHandler(async (req, res) => {
@@ -24,7 +84,7 @@ const addComment = asyncHandler(async (req, res) => {
     const { content } = req.body;
     const videoId = req.params.videoId;
     const userId = req.user._id;
-    
+
     if (!content) {
         throw new ApiError(400, "Content is invalid");
     }
@@ -96,10 +156,10 @@ const deleteComment = asyncHandler(async (req, res) => {
     const comment = await Comment.findByIdAndDelete(commentId);
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, comment, "Comment deleted successfully.")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, comment, "Comment deleted successfully.")
+        )
 })
 
 export {

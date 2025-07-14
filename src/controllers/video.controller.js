@@ -9,6 +9,31 @@ import { deleteOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js"
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+    /* 
+        1. Extract all videos from the Video Schema through the User Id searching.
+        2. Apply the MongoDB Aggregation & get the:
+            a. all videos
+        3. send the response
+    */
+    const options = {
+        page,
+        limit
+    }
+    // const videos = await Video.find();
+    // console.log(videos);
+
+    const myAggregateVideos = Video.aggregate();
+
+    Video.aggregatePaginate(myAggregateVideos, options, function(err, result){
+        if(err){
+            console.log(err);
+        } else {
+            console.log(result);
+            
+        }
+    })
+    
+
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -89,7 +114,7 @@ const updateVideo = asyncHandler(async (req, res) => {
 
     const { title, description } = req.body;
 
-    if(!(title || description)) {
+    if (!(title || description)) {
         throw new ApiError(400, "Title or Description is invalid")
     }
 
@@ -134,10 +159,10 @@ const deleteVideo = asyncHandler(async (req, res) => {
     const video = await Video.findByIdAndDelete(videoId);
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, video, "Video is deleted successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, video, "Video is deleted successfully")
+        )
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
