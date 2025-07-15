@@ -24,15 +24,15 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
     const myAggregateVideos = Video.aggregate();
 
-    Video.aggregatePaginate(myAggregateVideos, options, function(err, result){
-        if(err){
+    Video.aggregatePaginate(myAggregateVideos, options, function (err, result) {
+        if (err) {
             console.log(err);
         } else {
             console.log(result);
-            
+
         }
     })
-    
+
 
 })
 
@@ -96,7 +96,13 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Video Id is invalid");
     }
 
-    const video = await Video.findById(videoId);
+    const video = await Video.findByIdAndUpdate(
+        videoId,
+        { 
+            $inc: { views: 1 }
+        },
+        { new: true }
+    );
 
     return res
         .status(200)
