@@ -45,10 +45,13 @@ const getVideoComments = asyncHandler(async (req, res) => {
             $unwind: "$commentor" // This ensure, each time seperate commentor object is formed.
         }, {
             $project: {
-                _id: 0,
+                _id: 1,
                 content: 1,
+                "commentor._id": 1,
                 "commentor.username": 1,
                 "commentor.avatar": 1,
+                "commentor.fullName": 1,
+                "commentor.createdAt": 1,
             }
         }
     ]);

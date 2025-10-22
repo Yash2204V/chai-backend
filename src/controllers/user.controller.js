@@ -38,7 +38,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     const { fullName, email, username, password } = req.body
-    //console.log("email: ", email);
+    // console.log("email: ", email);
 
     if (
         [fullName, email, username, password].some((field) => field?.trim() === "")
@@ -53,7 +53,7 @@ const registerUser = asyncHandler(async (req, res) => {
     if (existedUser) {
         throw new ApiError(409, "User with email or username already exists")
     }
-    //console.log(req.files);
+    // console.log(req.files);
 
     const avatarLocalPath = req.files?.avatar[0]?.path;
     //const coverImageLocalPath = req.files?.coverImage[0]?.path;
@@ -78,7 +78,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     const user = await User.create({
         fullName,
-        avatar: avatar.url,
+        avatar: avatar?.url || "",
         coverImage: coverImage?.url || "",
         email,
         password,
@@ -107,7 +107,7 @@ const loginUser = asyncHandler(async (req, res) => {
     //access and referesh token
     //send cookie
 
-    const { email, username, password } = req.body
+    const { username, email, password } = req.body
 
     if (!username && !email) {
         throw new ApiError(400, "username or email is required")
@@ -139,7 +139,8 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: process.env.NODE_ENV === 'production', // Only secure in production
+        sameSite: 'strict'
     }
 
     return res
@@ -173,7 +174,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: process.env.NODE_ENV === 'production' // Only secure in production
     }
 
     return res
@@ -209,7 +210,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secure: true
+            secure: process.env.NODE_ENV === 'production' // Only secure in production
         }
 
         const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id);
@@ -405,12 +406,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 avatar: 1,
                 coverImage: 1,
                 email: 1
-
             }
         }
     ])
-
-    // console.log(channel);
     
     if (!channel?.length) {
         throw new ApiError(404, "channel does not exists")
